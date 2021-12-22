@@ -1,0 +1,112 @@
+[1mdiff --git a/example/test_multilabel_bert.py b/example/test_multilabel_bert.py[m
+[1mindex 76d50fa..5f0e2d1 100644[m
+[1m--- a/example/test_multilabel_bert.py[m
+[1m+++ b/example/test_multilabel_bert.py[m
+[36m@@ -24,6 +24,8 @@[m [mparser.add_argument('--ckpt', default='',[m
+         help='Checkpoint name')[m
+ parser.add_argument('--pooler', default='entity', choices=['cls', 'entity'], [m
+         help='Sentence representation pooler')[m
+[32m+[m[32mparser.add_argument('--classifier', default='softmax', choices=['softmax', 'sigmoid'],[m[41m [m
+[32m+[m[32m        help='Logistic classifier model')[m
+ parser.add_argument('--only_test', action='store_true', [m
+         help='Only run test')[m
+ parser.add_argument('--mask_entity', action='store_true', [m
+[36m@@ -111,7 +113,15 @@[m [melse:[m
+     raise NotImplementedError[m
+ [m
+ # Define the model[m
+[31m-model = opennre.model.SoftmaxNN(sentence_encoder, len(rel2id), rel2id)[m
+[32m+[m[32m# model = opennre.model.SoftmaxNN(sentence_encoder, len(rel2id), rel2id)[m
+[32m+[m
+[32m+[m[32m# Define the classifier model (added)[m
+[32m+[m[32mif args.classifier == 'softmax':[m
+[32m+[m[32m    model = opennre.model.SoftmaxNN(sentence_encoder, len(rel2id), rel2id)[m
+[32m+[m[32melif args.classifier == 'sigmoid':[m
+[32m+[m[32m    model = opennre.model.SigmoidNN(sentence_encoder, len(rel2id), rel2id)[m
+[32m+[m[32melse:[m
+[32m+[m[32m    raise NotImplementedError[m
+ [m
+ # Define the whole training framework[m
+ framework = opennre.framework.MultiLabelSentenceRE([m
+[1mdiff --git a/example/train_supervised_bert.py b/example/train_supervised_bert.py[m
+[1mindex e282ec9..3a3044b 100644[m
+[1m--- a/example/train_supervised_bert.py[m
+[1m+++ b/example/train_supervised_bert.py[m
+[36m@@ -24,6 +24,8 @@[m [mparser.add_argument('--ckpt', default='',[m
+         help='Checkpoint name')[m
+ parser.add_argument('--pooler', default='entity', choices=['cls', 'entity'], [m
+         help='Sentence representation pooler')[m
+[32m+[m[32mparser.add_argument('--classifier', default='softmax', choices=['softmax', 'sigmoid'],[m[41m [m
+[32m+[m[32m        help='Logistic classifier model')[m
+ parser.add_argument('--only_test', action='store_true', [m
+         help='Only run test')[m
+ parser.add_argument('--mask_entity', action='store_true', [m
+[36m@@ -110,8 +112,16 @@[m [melif args.pooler == 'cls':[m
+ else:[m
+     raise NotImplementedError[m
+ [m
+[32m+[m[32m# Define the classifier model (added)[m
+[32m+[m[32mif args.classifier == 'softmax':[m
+[32m+[m[32m    model = opennre.model.SoftmaxNN(sentence_encoder, len(rel2id), rel2id)[m
+[32m+[m[32melif args.classifier == 'sigmoid':[m
+[32m+[m[32m    model = opennre.model.SigmoidNN(sentence_encoder, len(rel2id), rel2id)[m
+[32m+[m[32melse:[m
+[32m+[m[32m    raise NotImplementedError[m
+[32m+[m
+ # Define the model[m
+[31m-model = opennre.model.SoftmaxNN(sentence_encoder, len(rel2id), rel2id)[m
+[32m+[m[32m# model = opennre.model.SoftmaxNN(sentence_encoder, len(rel2id), rel2id)[m
+ [m
+ # Define the whole training framework[m
+ framework = opennre.framework.SentenceRE([m
+[1mdiff --git a/opennre/pretrain.py b/opennre/pretrain.py[m
+[1mindex cb63402..9f1caa6 100644[m
+[1m--- a/opennre/pretrain.py[m
+[1m+++ b/opennre/pretrain.py[m
+[36m@@ -146,6 +146,46 @@[m [mdef get_model(model_name, root_path=default_root_path):[m
+         m = model.SoftmaxNN(sentence_encoder, len(rel2id), rel2id)[m
+         m.load_state_dict(torch.load(ckpt, map_location='cpu')['state_dict'])[m
+         return m[m
+[32m+[m[32m    elif model_name == 'dbpedia_bertentity_softmax':[m
+[32m+[m[32m        rel2id = json.load(open(os.path.join(root_path, 'benchmark/dbpedia/dbpedia_rel2id.json')))[m
+[32m+[m[32m        sentence_encoder = encoder.BERTEntityEncoder([m
+[32m+[m[32m            max_length=80, pretrain_path=os.path.join(root_path, 'pretrain/bert-base-portuguese-cased'))[m
+[32m+[m[32m        m = model.SoftmaxNN(sentence_encoder, len(rel2id), rel2id)[m
+[32m+[m[32m        m.load_state_dict(torch.load(ckpt, map_location='cpu')['state_dict'], strict=False)[m
+[32m+[m[32m        return m[m
+[32m+[m[32m    elif model_name == 'dbpedia_binary_bertentity_sigmoid':[m
+[32m+[m[32m        rel2id = json.load(open(os.path.join(root_path, 'benchmark/tacred/sigmoid_rel2id.json')))[m
+[32m+[m[32m        sentence_encoder = encoder.BERTEntityEncoder([m
+[32m+[m[32m            max_length=80, pretrain_path=os.path.join(root_path, 'pretrain/bert-base-portuguese-cased'))[m
+[32m+[m[32m        m = model.SigmoidNN(sentence_encoder, len(rel2id), rel2id)[m
+[32m+[m[32m        m.load_state_dict(torch.load(ckpt, map_location='cpu')['state_dict'], strict=False)[m
+[32m+[m[32m        return m[m
+[32m+[m[32m    elif model_name == 'tacred_binary_bertentity_sigmoid':[m
+[32m+[m[32m        rel2id = json.load(open(os.path.join(root_path, 'benchmark/tacred/sigmoid_rel2id.json')))[m
+[32m+[m[32m        sentence_encoder = encoder.BERTEntityEncoder([m
+[32m+[m[32m            max_length=80, pretrain_path=os.path.join(root_path, 'pretrain/bert-base-uncased'))[m
+[32m+[m[32m        m = model.SigmoidNN(sentence_encoder, len(rel2id), rel2id)[m
+[32m+[m[32m        m.load_state_dict(torch.load(ckpt, map_location='cpu')['state_dict'], strict=False)[m
+[32m+[m[32m        return m[m
+[32m+[m[32m    elif model_name == 'nyt10m_pcnn_att':[m
+[32m+[m[32m        rel2id = json.load(open(os.path.join(root_path, 'benchmark/nyt10m/nyt10m_rel2id.json')))[m
+[32m+[m[32m        word2id = json.load(open(os.path.join(root_path, 'pretrain/glove/glove.6B.50d_word2id.json')))[m
+[32m+[m[32m        word2vec = np.load(os.path.join(root_path, 'pretrain/glove/glove.6B.50d_mat.npy'))[m
+[32m+[m[32m        sentence_encoder = encoder.PCNNEncoder([m
+[32m+[m[32m            token2id=word2id,[m
+[32m+[m[32m            max_length=128,[m
+[32m+[m[32m            word_size=50,[m
+[32m+[m[32m            position_size=5,[m
+[32m+[m[32m            hidden_size=230,[m
+[32m+[m[32m            blank_padding=True,[m
+[32m+[m[32m            kernel_size=3,[m
+[32m+[m[32m            padding_size=1,[m
+[32m+[m[32m            word2vec=word2vec,[m
+[32m+[m[32m            dropout=0.5[m
+[32m+[m[32m        )[m
+[32m+[m[32m        m = model.BagAttention(sentence_encoder, len(rel2id), rel2id)[m
+[32m+[m[32m        m.load_state_dict(torch.load(ckpt, map_location='cpu')['state_dict'], strict=False)[m
+[32m+[m[32m        return m[m
+     elif model_name in ['wiki80_bert_softmax', 'wiki80_bertentity_softmax']:[m
+         download_pretrain(model_name, root_path=root_path)[m
+         download('bert_base_uncased', root_path=root_path)[m

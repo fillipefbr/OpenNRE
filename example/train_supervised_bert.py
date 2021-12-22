@@ -24,6 +24,8 @@ parser.add_argument('--ckpt', default='',
         help='Checkpoint name')
 parser.add_argument('--pooler', default='entity', choices=['cls', 'entity'], 
         help='Sentence representation pooler')
+parser.add_argument('--classifier', default='softmax', choices=['softmax', 'sigmoid'], 
+        help='Logistic classifier model')
 parser.add_argument('--only_test', action='store_true', 
         help='Only run test')
 parser.add_argument('--mask_entity', action='store_true', 
@@ -110,8 +112,16 @@ elif args.pooler == 'cls':
 else:
     raise NotImplementedError
 
+# Define the classifier model (added)
+if args.classifier == 'softmax':
+    model = opennre.model.SoftmaxNN(sentence_encoder, len(rel2id), rel2id)
+elif args.classifier == 'sigmoid':
+    model = opennre.model.SigmoidNN(sentence_encoder, len(rel2id), rel2id)
+else:
+    raise NotImplementedError
+
 # Define the model
-model = opennre.model.SoftmaxNN(sentence_encoder, len(rel2id), rel2id)
+# model = opennre.model.SoftmaxNN(sentence_encoder, len(rel2id), rel2id)
 
 # Define the whole training framework
 framework = opennre.framework.SentenceRE(

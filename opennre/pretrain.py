@@ -146,6 +146,46 @@ def get_model(model_name, root_path=default_root_path):
         m = model.SoftmaxNN(sentence_encoder, len(rel2id), rel2id)
         m.load_state_dict(torch.load(ckpt, map_location='cpu')['state_dict'])
         return m
+    elif model_name == 'dbpedia_bertentity_softmax':
+        rel2id = json.load(open(os.path.join(root_path, 'benchmark/dbpedia/dbpedia_rel2id.json')))
+        sentence_encoder = encoder.BERTEntityEncoder(
+            max_length=80, pretrain_path=os.path.join(root_path, 'pretrain/bert-base-portuguese-cased'))
+        m = model.SoftmaxNN(sentence_encoder, len(rel2id), rel2id)
+        m.load_state_dict(torch.load(ckpt, map_location='cpu')['state_dict'], strict=False)
+        return m
+    elif model_name == 'dbpedia_binary_bertentity_sigmoid':
+        rel2id = json.load(open(os.path.join(root_path, 'benchmark/tacred/sigmoid_rel2id.json')))
+        sentence_encoder = encoder.BERTEntityEncoder(
+            max_length=80, pretrain_path=os.path.join(root_path, 'pretrain/bert-base-portuguese-cased'))
+        m = model.SigmoidNN(sentence_encoder, len(rel2id), rel2id)
+        m.load_state_dict(torch.load(ckpt, map_location='cpu')['state_dict'], strict=False)
+        return m
+    elif model_name == 'tacred_binary_bertentity_sigmoid':
+        rel2id = json.load(open(os.path.join(root_path, 'benchmark/tacred/sigmoid_rel2id.json')))
+        sentence_encoder = encoder.BERTEntityEncoder(
+            max_length=80, pretrain_path=os.path.join(root_path, 'pretrain/bert-base-uncased'))
+        m = model.SigmoidNN(sentence_encoder, len(rel2id), rel2id)
+        m.load_state_dict(torch.load(ckpt, map_location='cpu')['state_dict'], strict=False)
+        return m
+    elif model_name == 'nyt10m_pcnn_att':
+        rel2id = json.load(open(os.path.join(root_path, 'benchmark/nyt10m/nyt10m_rel2id.json')))
+        word2id = json.load(open(os.path.join(root_path, 'pretrain/glove/glove.6B.50d_word2id.json')))
+        word2vec = np.load(os.path.join(root_path, 'pretrain/glove/glove.6B.50d_mat.npy'))
+        sentence_encoder = encoder.PCNNEncoder(
+            token2id=word2id,
+            max_length=128,
+            word_size=50,
+            position_size=5,
+            hidden_size=230,
+            blank_padding=True,
+            kernel_size=3,
+            padding_size=1,
+            word2vec=word2vec,
+            dropout=0.5
+        )
+        m = model.BagAttention(sentence_encoder, len(rel2id), rel2id)
+        m.load_state_dict(torch.load(ckpt, map_location='cpu')['state_dict'], strict=False)
+        return m
     elif model_name in ['wiki80_bert_softmax', 'wiki80_bertentity_softmax']:
         download_pretrain(model_name, root_path=root_path)
         download('bert_base_uncased', root_path=root_path)
