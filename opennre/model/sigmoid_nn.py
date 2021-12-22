@@ -23,6 +23,19 @@ class SigmoidNN(SentenceRE):
         self.drop = nn.Dropout()
         for rel, id in rel2id.items():
             self.id2rel[id] = rel
+        
+    def infer(self, item):
+        self.eval()
+        _item = self.sentence_encoder.tokenize(item)
+        item = []
+        for x in _item:
+            item.append(x.to(next(self.parameters()).device))
+        logits = self.forward(*item)
+        logits = self.softmax(logits)
+        score, pred = logits.max(-1)
+        score = score.item()
+        pred = pred.item()
+        return self.id2rel[pred], score
 
     def forward(self, *args):
         """
